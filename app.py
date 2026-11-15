@@ -1,8 +1,8 @@
 """
 Hệ Thống Chấm Bài Thi Tự Luận & Trắc Nghiệm GDPT 2018 (Mobile & Streamlit Cloud)
-Thiết kế trực quan:
+Hỗ trợ LINH HOẠT SỐ LƯỢNG CÂU HỎI (10, 16, 20, 24, 30, 40, 50... câu)
 - Tab 1: 📱 Chấm Bài Thi (Chụp camera, tải ảnh, chấm và sửa điểm, xuất Excel)
-- Tab 2: 📝 Nạp & Quản Lý Barem Đáp Án (Nạp Word, PDF, dán text, hoặc sửa từng câu)
+- Tab 2: 📝 Nạp & Quản Lý Barem Đáp Án (Tùy chỉnh số câu linh hoạt)
 - Tab 3: 🔑 Cài Đặt Gemini API Key Pool (Xoay vòng key miễn phí)
 """
 
@@ -83,7 +83,7 @@ if "staged_papers" not in st.session_state:
     st.session_state["staged_papers"] = []
 
 # ==============================================================================
-# HÀM XỬ LÝ FILE ĐÁP ÁN WORD & PDF
+# HÀM XỬ LÝ FILE ĐÁP ÁN WORD & PDF (TỰ ĐỘNG BÓC TÁCH KHÔNG GIỚI HẠN SỐ CÂU)
 # ==============================================================================
 def extract_text_from_word(docx_bytes):
     doc = docx.Document(io.BytesIO(docx_bytes))
@@ -136,25 +136,28 @@ def parse_answer_key_content(raw_text: str):
         "raw_text": raw_text
     }
 
+    # Bóc tách Phần I: Không giới hạn số câu (hỗ trợ đề 10, 20, 28, 40, 50, 60 câu)
     lines = raw_text.split("\n")
     for idx, line in enumerate(lines):
-        for m in re.finditer(r'(?:Câu\s*)?(\b\d{1,2}\b)\s*[:.-]?\s*([A-Da-d])\b', line):
+        for m in re.finditer(r'(?:Câu\s*)?(\b\d{1,3}\b)\s*[:.-]?\s*([A-Da-d])\b', line):
             q_num = m.group(1)
             q_ans = m.group(2).upper()
-            if 1 <= int(q_num) <= 16:
+            if 1 <= int(q_num) <= 100:
                 parsed_info["p1_answers"][q_num] = q_ans
 
+    # Trường hợp đọc từ dạng bảng Word (Dòng 1 số câu, Dòng 2 đáp án A/B/C/D)
     for idx in range(len(lines) - 1):
         if "Đ/Á" in lines[idx + 1] or "Đáp án" in lines[idx + 1]:
             q_cols = [c.strip() for c in lines[idx].split("|") if c.strip().isdigit()]
             a_cols = [c.strip().upper() for c in lines[idx + 1].split("|") if c.strip().upper() in ["A", "B", "C", "D"]]
             for q_c, a_c in zip(q_cols, a_cols):
-                if 1 <= int(q_c) <= 16:
+                if 1 <= int(q_c) <= 100:
                     parsed_info["p1_answers"][q_c] = a_c
 
+    # Bóc tách Phần II (Đúng/Sai)
     current_q = None
     for line in lines:
-        q_match = re.search(r'Câu\s*([1-4])', line, re.IGNORECASE)
+        q_match = re.search(r'Câu\s*([1-9]|10)', line, re.IGNORECASE)
         if q_match:
             current_q = q_match.group(1)
             if current_q not in parsed_info["p2_answers"]:
@@ -162,7 +165,7 @@ def parse_answer_key_content(raw_text: str):
 
         table_cells = [c.strip() for c in line.split("|") if c.strip()]
         if table_cells and len(table_cells) >= 5:
-            q_cell_match = re.search(r'Câu\s*([1-4])', table_cells[0], re.IGNORECASE)
+            q_cell_match = re.search(r'Câu\s*([1-9]|10)', table_cells[0], re.IGNORECASE)
             if q_cell_match:
                 q_id = q_cell_match.group(1)
                 sub_answers = [c for c in table_cells[1:5] if normalize_true_false(c)]
@@ -183,21 +186,20 @@ def parse_answer_key_content(raw_text: str):
     return parsed_info
 
 # ==============================================================================
-# GIAO DIỆN CHÍNH DẠNG TABS TRỰC QUAN (KHÔNG BỊ ẨN TRÊN ĐIỆN THOẠI)
+# GIAO DIỆN CHÍNH DẠNG TABS TRỰC QUAN
 # ==============================================================================
 main_tab1, main_tab2, main_tab3 = st.tabs([
     "📱 1. CHẤM BÀI THI (Camera & Ảnh)", 
-    "📝 2. NẠP & SỬA BAREM ĐÁP ÁN", 
+    "📝 2. NẠP & SỬA BAREM ĐÁP ÁN (Linh hoạt số câu)", 
     "🔑 3. CÀI ĐẶT GEMINI KEY POOL"
 ])
 
 # ==============================================================================
-# TAB 1: CHẤM BÀI THI
+# TAB 1: CHẤM BÀI THI (TỰ ĐỘNG THÍCH ỨNG SỐ CÂU CỦA ĐỀ)
 # ==============================================================================
 with main_tab1:
     st.subheader("📱 Màn Hình Chấm Bài Thi")
 
-    # Banner hiển thị thông tin Barem hiện tại
     available_codes = list(keys_db.keys())
     c_bar1, c_bar2 = st.columns([2, 1])
     with c_bar1:
@@ -217,7 +219,7 @@ with main_tab1:
 
     st.divider()
 
-    # BƯỚC 1: TẢI HOẶC CHỤP ẢNH (CHƯA CHẤM NGAY)
+    # BƯỚC 1: TẢI HOẶC CHỤP ẢNH
     with st.expander("📸 BƯỚC 1: CHỤP HOẶC TẢI ẢNH BÀI THI CỦA HỌC SINH", expanded=(len(st.session_state["staged_papers"]) == 0)):
         sub_tab_cam, sub_tab_file = st.tabs(["📷 Chụp Bằng Camera Điện Thoại", "📁 Chọn Nhiều Ảnh / PDF Từ Máy"])
 
@@ -283,7 +285,6 @@ with main_tab1:
                 st.session_state["staged_papers"] = []
                 st.rerun()
 
-        # NÚT BẤM ĐỂ CHẤM
         btn_grade_all = st.button("🚀 BẮT ĐẦU CHẤM TẤT CẢ CÁC BÀI ĐÃ TẢI LÊN", type="primary", use_container_width=True)
 
         if btn_grade_all:
@@ -301,10 +302,13 @@ with main_tab1:
                     )
 
                     if err:
+                        # Mô phỏng linh hoạt theo số câu của Barem đầu tiên
+                        sample_b = list(keys_db.values())[0] if keys_db else {}
+                        num_q_sample = len(sample_b.get("part_1_mcq", {}).get("answers", {})) or 16
                         paper["result"] = {
                             "sbd": f"7201{idx+1:02d}",
-                            "code": "301",
-                            "p1": {str(i): "B" if i % 2 == 0 else "A" for i in range(1, 17)},
+                            "code": list(keys_db.keys())[0] if keys_db else "301",
+                            "p1": {str(i): "B" if i % 2 == 0 else "A" for i in range(1, num_q_sample + 1)},
                             "p2": {
                                 "1": {"a": "S", "b": "Đ", "c": "Đ", "d": "S"},
                                 "2": {"a": "S", "b": "Đ", "c": "Đ", "d": "S"},
@@ -353,7 +357,7 @@ with main_tab1:
             status_box.success("🎉 Đã chấm xong tất cả các bài! Mời xem chi tiết và sửa điểm bên dưới.")
             st.rerun()
 
-    # BƯỚC 3: ĐỐI SOÁT & CHỈNH SỬA TỪNG BÀI
+    # BƯỚC 3: ĐỐI SOÁT & CHỈNH SỬA TỪNG BÀI (TỰ ĐỘNG THÍCH ỨNG SỐ CÂU CỦA BAREM)
     graded_papers = [p for p in staged_list if p["is_graded"]]
 
     if graded_papers:
@@ -389,50 +393,57 @@ with main_tab1:
 
             tab_p1, tab_p2, tab_p3 = st.tabs(["Phần I (Trắc nghiệm)", "Phần II (Đúng/Sai)", "Phần III (Tự luận)"])
 
+            # --- TAB 1: HIỂN THỊ ĐỦ SỐ CÂU THỰC TẾ TRONG ĐỀ ---
             with tab_p1:
-                st.markdown(f"**Phần I: 16 câu trắc nghiệm (Mã đề {curr_res['code']})**")
+                sorted_p1_keys = sorted(p1_key.keys(), key=lambda x: int(x) if str(x).isdigit() else 999)
+                total_p1_q = len(sorted_p1_keys) or 16
+                max_score_p1 = active_barem.get("part_1_mcq", {}).get("max_score", 4.0)
+                
+                st.markdown(f"**Phần I: Gồm {total_p1_q} câu trắc nghiệm (Mã đề {curr_res['code']} - {max_score_p1}đ)**")
                 st.caption("🔴 Đáp án SAI sẽ hiện khung đỏ, kế bên hiện ĐÁP ÁN ĐÚNG màu xanh:")
 
                 p1_choices = ["A", "B", "C", "D"]
                 p1_grid = st.columns(4)
 
-                for q_i in range(1, 17):
-                    q_str = str(q_i)
+                for idx_q, q_str in enumerate(sorted_p1_keys):
                     stud_val = curr_res["p1"].get(q_str, "A")
                     correct_val = p1_key.get(q_str, "A")
                     is_correct = (stud_val == correct_val)
                     
-                    target_col = p1_grid[(q_i - 1) % 4]
+                    target_col = p1_grid[idx_q % 4]
                     with target_col:
                         if is_correct:
-                            st.markdown(f"**C{q_i}:** ✅ `{stud_val}`")
+                            st.markdown(f"**C{q_str}:** ✅ `{stud_val}`")
                         else:
                             st.markdown(
-                                f"**C{q_i}:** <span class='wrong-answer-badge'>{stud_val} ❌</span><br>"
+                                f"**C{q_str}:** <span class='wrong-answer-badge'>{stud_val} ❌</span><br>"
                                 f"👉 <span class='correct-answer-ref'>Đ/A: {correct_val}</span>", 
                                 unsafe_allow_html=True
                             )
                         
                         val_idx = p1_choices.index(stud_val) if stud_val in p1_choices else 0
                         new_ans = st.selectbox(
-                            f"Sửa C{q_i}:",
+                            f"Sửa C{q_str}:",
                             p1_choices,
                             index=val_idx,
-                            key=f"edit_p1_p{selected_paper_idx}_q{q_i}",
+                            key=f"edit_p1_p{selected_paper_idx}_q{q_str}",
                             label_visibility="collapsed"
                         )
                         curr_res["p1"][q_str] = new_ans
 
                 score_res_p1 = score_part_1(curr_res["p1"], active_barem.get("part_1_mcq", {}))
                 st.divider()
-                st.success(f"Điểm Phần I: **{score_res_p1['total_score']} / 4.0 điểm** (Đúng {score_res_p1['correct_count']}/16 câu)")
+                st.success(f"Điểm Phần I: **{score_res_p1['total_score']} / {score_res_p1['max_score']} điểm** (Đúng {score_res_p1['correct_count']}/{total_p1_q} câu)")
 
+            # --- TAB 2: HIỂN THỊ ĐỦ SỐ CÂU ĐÚNG / SAI THỰC TẾ ---
             with tab_p2:
-                st.markdown(f"**Phần II: Đúng / Sai 4 câu (Mã đề {curr_res['code']})**")
-                for q_num in range(1, 5):
-                    q_str = str(q_num)
-                    stud_q_sub = curr_res["p2"].get(q_str, {"a": "Đ", "b": "Đ", "c": "S", "d": "S"})
-                    key_q_sub = p2_key.get(q_str, {"a": "Đ", "b": "S", "c": "Đ", "d": "S"})
+                sorted_p2_keys = sorted(p2_key.keys(), key=lambda x: int(x) if str(x).isdigit() else 999)
+                max_score_p2 = active_barem.get("part_2_true_false", {}).get("max_score", len(sorted_p2_keys) * 1.0)
+                st.markdown(f"**Phần II: Gồm {len(sorted_p2_keys)} câu Đúng/Sai (Mã đề {curr_res['code']} - {max_score_p2}đ)**")
+
+                for q_num in sorted_p2_keys:
+                    stud_q_sub = curr_res["p2"].get(q_num, {"a": "Đ", "b": "Đ", "c": "S", "d": "S"})
+                    key_q_sub = p2_key.get(q_num, {"a": "Đ", "b": "S", "c": "Đ", "d": "S"})
 
                     with st.expander(f"📝 Câu hỏi {q_num}", expanded=True):
                         sub_cols = st.columns(4)
@@ -459,12 +470,13 @@ with main_tab1:
                                     key=f"edit_p2_p{selected_paper_idx}_q{q_num}_{sub_key}",
                                     label_visibility="collapsed"
                                 )
-                                curr_res["p2"][q_str][sub_key] = new_sub_v
+                                curr_res["p2"][q_num][sub_key] = new_sub_v
 
                 score_res_p2 = score_part_2(curr_res["p2"], active_barem.get("part_2_true_false", {}))
                 st.divider()
-                st.success(f"Điểm Phần II: **{score_res_p2['total_score']} / 4.0 điểm** (Điểm bậc thang)")
+                st.success(f"Điểm Phần II: **{score_res_p2['total_score']} / {score_res_p2['max_score']} điểm** (Điểm bậc thang)")
 
+            # --- TAB 3: SỬA TỰ LUẬN ---
             with tab_p3:
                 st.markdown("**Phần III: Tự luận (Cho phép nhập đè số điểm trực tiếp)**")
                 p3_data = curr_res["p3"]
@@ -474,7 +486,7 @@ with main_tab1:
                     c1_s_col, c1_t_col = st.columns([1, 2])
                     with c1_s_col:
                         p3_data["c1_score"] = st.number_input(
-                            "Điểm Câu 1:", min_value=0.0, max_value=1.0, 
+                            "Điểm Câu 1:", min_value=0.0, max_value=2.0, 
                             value=float(p3_data.get("c1_score", 0.70)), step=0.05, format="%.2f", 
                             key=f"c1_score_edit_{selected_paper_idx}"
                         )
@@ -487,7 +499,7 @@ with main_tab1:
                     c2_s_col, c2_t_col = st.columns([1, 2])
                     with c2_s_col:
                         p3_data["c2_score"] = st.number_input(
-                            "Điểm Câu 2:", min_value=0.0, max_value=1.0, 
+                            "Điểm Câu 2:", min_value=0.0, max_value=2.0, 
                             value=float(p3_data.get("c2_score", 0.75)), step=0.05, format="%.2f", 
                             key=f"c2_score_edit_{selected_paper_idx}"
                         )
@@ -546,22 +558,22 @@ with main_tab1:
 
 
 # ==============================================================================
-# TAB 2: NẠP & QUẢN LÝ BAREM ĐÁP ÁN (RÕ RÀNG NGAY TRÊN TRANG CHỦ)
+# TAB 2: NẠP & QUẢN LÝ BAREM ĐÁP ÁN (LINH HOẠT SỐ LƯỢNG CÂU HỎI)
 # ==============================================================================
 with main_tab2:
-    st.subheader("📝 Nạp & Quản Lý Barem Đáp Án Chuẩn")
-    st.caption("Bạn có thể nạp file Word (.docx), file PDF, dán text, hoặc sửa trực tiếp từng câu hỏi.")
+    st.subheader("📝 Nạp & Quản Lý Barem Đáp Án Chuẩn (Linh Hoạt Số Câu)")
+    st.caption("Cho phép tùy chỉnh số lượng câu trắc nghiệm (10, 16, 20, 24, 30, 40, 50... câu) và thang điểm tương ứng.")
 
     b_tab1, b_tab2, b_tab3, b_tab4 = st.tabs([
-        "📁 NẠP TỪ FILE WORD / PDF",
-        "🛠️ SỬA TRỰC TIẾP TỪNG CÂU (FORM)", 
+        "📁 NẠP TỪ FILE WORD / PDF (Tự đếm số câu)",
+        "🛠️ SỬA TRỰC TIẾP TỪNG CÂU (FORM TÙY BIẾN SỐ CÂU)", 
         "⚡ DÁN TEXT ĐÁP ÁN NHANH", 
         "💾 XEM TOÀN BỘ KHO BAREM (JSON)"
     ])
 
-    # 1. NẠP FILE WORD / PDF
+    # 1. NẠP FILE WORD / PDF (TỰ ĐỘNG ĐẾM SỐ CÂU THỰC TẾ TRONG FILE)
     with b_tab1:
-        st.markdown("#### Tải lên file Word (.docx) hoặc file PDF chứa đáp án:")
+        st.markdown("#### Tải lên file Word (.docx) hoặc PDF đáp án:")
         uploaded_doc = st.file_uploader(
             "Chọn file Word (.docx) hoặc PDF:", 
             type=["docx", "pdf"],
@@ -576,26 +588,32 @@ with main_tab2:
                     extracted_text = extract_text_from_pdf(doc_bytes)
                 parsed_res = parse_answer_key_content(extracted_text)
                 
-            st.success(f"✅ Đã đọc thành công file **{uploaded_doc.name}**!")
+            detected_q_count = len(parsed_res['p1_answers'])
+            st.success(f"✅ Đã đọc file **{uploaded_doc.name}** thành công! Bóc tách được **{detected_q_count} câu trắc nghiệm** và **{len(parsed_res['p2_answers'])} câu Đúng/Sai**.")
             
             with st.container(border=True):
-                c1, c2, c3 = st.columns(3)
+                c1, c2, c3, c4 = st.columns(4)
                 with c1:
                     f_code = st.text_input("Mã đề:", value=parsed_res['exam_code'], key="f_code_in")
                 with c2:
                     f_subj = st.text_input("Môn học:", value=parsed_res['subject'], key="f_subj_in")
                 with c3:
                     f_grade = st.selectbox("Khối lớp:", ["10", "11", "12"], index=1, key="f_grade_in")
+                with c4:
+                    f_max_p1 = st.number_input("Tổng điểm Phần I:", min_value=1.0, max_value=10.0, value=4.0, step=0.5, key="f_max_p1")
 
-                st.markdown("**Đáp án Phần I bóc tách được (có thể sửa trước khi lưu):**")
+                st.markdown(f"**Đáp án Phần I ({detected_q_count} câu - có thể sửa trước khi lưu):**")
+                
+                # Hiển thị lưới động theo số câu thực tế
                 p1_f_cols = st.columns(8)
                 file_p1_answers = {}
-                for i in range(1, 17):
-                    q_str = str(i)
+                sorted_f_keys = sorted(parsed_res['p1_answers'].keys(), key=lambda x: int(x) if str(x).isdigit() else 999)
+                
+                for idx_k, q_str in enumerate(sorted_f_keys):
                     detected_val = parsed_res['p1_answers'].get(q_str, "A")
                     val_idx = ["A", "B", "C", "D"].index(detected_val) if detected_val in ["A", "B", "C", "D"] else 0
-                    file_p1_answers[q_str] = p1_f_cols[(i - 1) % 8].selectbox(
-                        f"Câu {i}", ["A", "B", "C", "D"], index=val_idx, key=f"f_p1_{i}"
+                    file_p1_answers[q_str] = p1_f_cols[idx_k % 8].selectbox(
+                        f"Câu {q_str}", ["A", "B", "C", "D"], index=val_idx, key=f"f_p1_{q_str}"
                     )
 
                 if st.button("💾 LƯU MÃ ĐỀ NÀY VÀO KHO BAREM", type="primary", use_container_width=True):
@@ -609,24 +627,24 @@ with main_tab2:
                             "total_score": 10.0
                         },
                         "part_1_mcq": {
-                            "total_questions": 16,
-                            "score_per_question": 0.25,
-                            "max_score": 4.0,
+                            "total_questions": len(file_p1_answers),
+                            "max_score": f_max_p1,
+                            "score_per_question": round(f_max_p1 / len(file_p1_answers), 4) if len(file_p1_answers) > 0 else 0.25,
                             "answers": file_p1_answers
                         },
                         "part_2_true_false": {
-                            "total_questions": 4,
-                            "max_score": 4.0,
+                            "total_questions": len(parsed_res['p2_answers']),
+                            "max_score": float(len(parsed_res['p2_answers'])),
                             "questions": parsed_res['p2_answers']
                         },
                         "part_3_essay": {"total_questions": 2, "max_score": 2.0, "questions": []}
                     }
                     save_keys_db(keys_db)
                     st.session_state["keys_db"] = keys_db
-                    st.toast(f"Đã lưu Mã đề {f_code} vào kho thành công!", icon="🎉")
+                    st.toast(f"Đã lưu Mã đề {f_code} ({len(file_p1_answers)} câu P1) vào kho!", icon="🎉")
                     st.rerun()
 
-    # 2. SỬA TRỰC TIẾP TỪNG CÂU (FORM EDITOR)
+    # 2. SỬA TRỰC TIẾP TỪNG CÂU (FORM EDITOR VỚI SỐ CÂU TÙY BIẾN)
     with b_tab2:
         all_codes = list(keys_db.keys()) if keys_db else ["301"]
         target_edit_code = st.selectbox(
@@ -637,15 +655,17 @@ with main_tab2:
 
         if target_edit_code == "➕ Tạo mã đề mới...":
             active_edit_data = {
-                "exam_info": {"title": "KIỂM TRA TIN HỌC", "subject": "Tin học", "grade": "11", "exam_code": "303"},
-                "part_1_mcq": {"answers": {str(i): "A" for i in range(1, 17)}},
+                "exam_info": {"title": "KIỂM TRA MÔN HỌC", "subject": "Tin học", "grade": "11", "exam_code": "303"},
+                "part_1_mcq": {"total_questions": 20, "max_score": 5.0, "answers": {str(i): "A" for i in range(1, 21)}},
                 "part_2_true_false": {"questions": {str(q): {"a": "Đ", "b": "S", "c": "Đ", "d": "S"} for q in range(1, 5)}},
                 "part_3_essay": {"questions": []}
             }
         else:
             active_edit_data = keys_db.get(target_edit_code, {})
 
+        # Form thiết lập thông tin & số câu
         with st.container(border=True):
+            st.markdown("##### 1. Cấu Hình Cơ Bản & Số Câu Hỏi:")
             c_info1, c_info2, c_info3 = st.columns(3)
             with c_info1:
                 cur_c_code = active_edit_data.get("exam_info", {}).get("exam_code", target_edit_code if target_edit_code != "➕ Tạo mã đề mới..." else "303")
@@ -655,22 +675,47 @@ with main_tab2:
             with c_info3:
                 e_grade = st.selectbox("Khối lớp:", ["10", "11", "12"], index=1, key="tab2_e_grade")
 
-        st.markdown("##### Đáp Án Chuẩn Phần I (16 câu):")
+            c_q_num, c_p1_max = st.columns(2)
+            cur_p1_answers = active_edit_data.get("part_1_mcq", {}).get("answers", {})
+            default_num_p1 = len(cur_p1_answers) if cur_p1_answers else 16
+            
+            with c_q_num:
+                # Cho phép giáo viên chọn từ 1 đến 60 câu!
+                num_p1_custom = st.number_input(
+                    "👉 SỐ CÂU TRẮC NGHIỆM PHẦN I (Tùy chỉnh 1 - 60 câu):",
+                    min_value=1,
+                    max_value=60,
+                    value=default_num_p1,
+                    step=1,
+                    help="Đổi số này để tự động sinh đúng số lượng câu trắc nghiệm theo đề thi (12, 16, 20, 24, 28, 40, 50...)"
+                )
+            with c_p1_max:
+                p1_max_custom = st.number_input(
+                    "Tổng điểm Phần I:",
+                    min_value=1.0,
+                    max_value=10.0,
+                    value=float(active_edit_data.get("part_1_mcq", {}).get("max_score", 4.0)),
+                    step=0.5
+                )
+
+        # Lưới chọn đáp án tự động thích ứng với num_p1_custom
+        st.markdown(f"##### 2. Đáp Án Chuẩn Phần I ({num_p1_custom} câu):")
         p1_cols = st.columns(8)
-        cur_p1_answers = active_edit_data.get("part_1_mcq", {}).get("answers", {})
         updated_p1 = {}
-        for i in range(1, 17):
+        for i in range(1, int(num_p1_custom) + 1):
             col_target = p1_cols[(i - 1) % 8]
             default_ans = cur_p1_answers.get(str(i), "A")
             ans_idx = ["A", "B", "C", "D"].index(default_ans) if default_ans in ["A", "B", "C", "D"] else 0
             updated_p1[str(i)] = col_target.selectbox(
-                f"Câu {i}", ["A", "B", "C", "D"], index=ans_idx, key=f"tab2_p1_q{i}_{e_code}"
+                f"Câu {i}", ["A", "B", "C", "D"], index=ans_idx, key=f"tab2_p1_q{i}_{e_code}_{num_p1_custom}"
             )
 
-        st.markdown("##### Đáp Án Chuẩn Phần II (Đúng/Sai):")
+        st.markdown("##### 3. Đáp Án Chuẩn Phần II (Đúng/Sai):")
         cur_p2_questions = active_edit_data.get("part_2_true_false", {}).get("questions", {})
+        num_p2_custom = st.number_input("Số câu Đúng/Sai Phần II:", min_value=0, max_value=10, value=len(cur_p2_questions) if cur_p2_questions else 4, step=1)
+        
         updated_p2 = {}
-        for q_i in range(1, 5):
+        for q_i in range(1, int(num_p2_custom) + 1):
             st.markdown(f"**Câu {q_i}:**")
             sub_cols = st.columns(4)
             q_key_str = str(q_i)
@@ -694,30 +739,31 @@ with main_tab2:
                     "total_score": 10.0
                 },
                 "part_1_mcq": {
-                    "total_questions": 16,
-                    "score_per_question": 0.25,
-                    "max_score": 4.0,
+                    "total_questions": len(updated_p1),
+                    "max_score": p1_max_custom,
+                    "score_per_question": round(p1_max_custom / len(updated_p1), 4) if len(updated_p1) > 0 else 0.25,
                     "answers": updated_p1
                 },
                 "part_2_true_false": {
-                    "total_questions": 4,
-                    "max_score": 4.0,
+                    "total_questions": len(updated_p2),
+                    "max_score": float(len(updated_p2)),
                     "questions": updated_p2
                 },
                 "part_3_essay": active_edit_data.get("part_3_essay", {"questions": []})
             }
             save_keys_db(keys_db)
             st.session_state["keys_db"] = keys_db
-            st.toast(f"Đã lưu thành công Barem Mã đề {e_code}!", icon="🎉")
+            st.toast(f"Đã lưu thành công Barem Mã đề {e_code} với {len(updated_p1)} câu trắc nghiệm!", icon="🎉")
             st.rerun()
 
-    # 3. DÁN TEXT
+    # 3. DÁN TEXT (TỰ ĐỘNG ĐẾM SỐ CÂU)
     with b_tab3:
-        pasted_text = st.text_area("Dán nội dung ma trận đáp án vào đây:", height=180, key="tab2_paste_area")
+        pasted_text = st.text_area("Dán nội dung ma trận đáp án vào đây (ví dụ 20 câu hoặc 40 câu):", height=180, key="tab2_paste_area")
         c_p_code = st.text_input("Mã đề thi cần lưu:", value="302", key="tab2_paste_code")
         if st.button("🚀 Phân Tích & Lưu", type="primary", key="tab2_paste_btn"):
             parsed_res = parse_answer_key_content(pasted_text)
             actual_code = c_p_code if c_p_code else parsed_res['exam_code']
+            total_p1_found = len(parsed_res['p1_answers'])
             keys_db[actual_code] = {
                 "exam_info": {
                     "title": f"KIỂM TRA MÔN {parsed_res['subject'].upper()} - LỚP {parsed_res['grade']}",
@@ -727,13 +773,18 @@ with main_tab2:
                     "duration_minutes": 45,
                     "total_score": 10.0
                 },
-                "part_1_mcq": {"total_questions": 16, "score_per_question": 0.25, "max_score": 4.0, "answers": parsed_res['p1_answers']},
-                "part_2_true_false": {"total_questions": 4, "max_score": 4.0, "questions": parsed_res['p2_answers']},
+                "part_1_mcq": {
+                    "total_questions": total_p1_found, 
+                    "max_score": 4.0,
+                    "score_per_question": round(4.0 / total_p1_found, 4) if total_p1_found > 0 else 0.25,
+                    "answers": parsed_res['p1_answers']
+                },
+                "part_2_true_false": {"total_questions": len(parsed_res['p2_answers']), "max_score": float(len(parsed_res['p2_answers'])), "questions": parsed_res['p2_answers']},
                 "part_3_essay": {"total_questions": 2, "max_score": 2.0, "questions": []}
             }
             save_keys_db(keys_db)
             st.session_state["keys_db"] = keys_db
-            st.toast(f"Đã lưu Mã đề {actual_code} vào kho!", icon="✅")
+            st.toast(f"Đã lưu Mã đề {actual_code} với {total_p1_found} câu trắc nghiệm!", icon="✅")
             st.rerun()
 
     # 4. XEM KHO JSON
