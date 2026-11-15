@@ -1,0 +1,153 @@
+{
+  "exam_info": {
+    "title": "KIỂM TRA MÔN TIN HỌC - LỚP 11",
+    "school": "THPT LONG CANG - TÂY NINH",
+    "academic_year": "2026-2027",
+    "exam_code": "102",
+    "duration_minutes": 45,
+    "total_score": 10.0,
+    "grade": "11",
+    "subject": "Tin Học"
+  },
+  "part_1_mcq": {
+    "total_questions": 16,
+    "score_per_question": 0.25,
+    "max_score": 4.0,
+    "answers": {
+      "1": "D",
+      "2": "B",
+      "3": "A",
+      "4": "D",
+      "5": "B",
+      "6": "B",
+      "7": "A",
+      "8": "D",
+      "9": "A",
+      "10": "A",
+      "11": "A",
+      "12": "B",
+      "13": "D",
+      "14": "B",
+      "15": "C",
+      "16": "A"
+    }
+  },
+  "part_2_true_false": {
+    "total_questions": 4,
+    "max_score": 4.0,
+    "scoring_scale": {
+      "1_correct": 0.1,
+      "2_correct": 0.25,
+      "3_correct": 0.5,
+      "4_correct": 1.0
+    },
+    "questions": {
+      "1": {
+        "a": "S",
+        "b": "S",
+        "c": "Đ",
+        "d": "Đ"
+      },
+      "2": {
+        "a": "Đ",
+        "b": "S",
+        "c": "S",
+        "d": "Đ"
+      },
+      "3": {
+        "a": "Đ",
+        "b": "Đ",
+        "c": "S",
+        "d": "S"
+      },
+      "4": {
+        "a": "Đ",
+        "b": "Đ",
+        "c": "S",
+        "d": "S"
+      }
+    }
+  },
+  "part_3_essay": {
+    "total_questions": 2,
+    "max_score": 2.0,
+    "questions": [
+      {
+        "question_number": 1,
+        "max_score": 1.0,
+        "topic": "Đạo đức và tác động của AI",
+        "criteria": [
+          {
+            "id": "c1_warnings",
+            "description": "Nêu cảnh báo/nguy cơ: Thất nghiệp do tự động hóa, rò rỉ dữ liệu cá nhân, tính minh bạch thấp, rủi ro vũ khí tự động...",
+            "keywords": [
+              "thất nghiệp",
+              "tự động hóa",
+              "dữ liệu cá nhân",
+              "hộp đen",
+              "minh bạch",
+              "an ninh",
+              "vũ khí"
+            ],
+            "max_score": 0.35
+          },
+          {
+            "id": "c1_causes",
+            "description": "Nguyên nhân đạo đức/sai lệch: Thiên vị trong dữ liệu huấn luyện, mục đích xấu, thiếu kiểm soát...",
+            "keywords": [
+              "thiên vị",
+              "dữ liệu huấn luyện",
+              "bias",
+              "mục đích xấu",
+              "thiếu kiểm soát"
+            ],
+            "max_score": 0.35
+          },
+          {
+            "id": "c1_responsibilities",
+            "description": "Trách nhiệm công dân: Sử dụng AI trung thực, tư duy phản biện, không sao chép máy móc, kiểm chứng thông tin...",
+            "keywords": [
+              "trách nhiệm",
+              "trung thực",
+              "phản biện",
+              "kiểm chứng",
+              "không sao chép"
+            ],
+            "max_score": 0.3
+          }
+        ]
+      },
+      {
+        "question_number": 2,
+        "max_score": 1.0,
+        "topic": "Thiết kế trang web cơ bản với thẻ HTML",
+        "criteria": [
+          {
+            "id": "c2_h1",
+            "description": "Sử dụng thẻ <h1> với style='color:red' cho tiêu đề",
+            "regex": "<h1[^>]*style=['\"][^'\"]*color\\s*:\\s*red[^'\"]*['\"][^>]*>.*?</h1>",
+            "max_score": 0.25
+          },
+          {
+            "id": "c2_p",
+            "description": "Sử dụng thẻ <p> cho đoạn văn",
+            "regex": "<p[^>]*>.*?</p>",
+            "max_score": 0.25
+          },
+          {
+            "id": "c2_sub",
+            "description": "Sử dụng thẻ <sub> cho chỉ số dưới trong công thức hóa học (ví dụ H2O)",
+            "regex": "<sub[^>]*>.*?</sub>",
+            "max_score": 0.25
+          },
+          {
+            "id": "c2_style_color",
+            "description": "Sử dụng thuộc tính style='color:blue' hoặc green cho công thức hóa học",
+            "regex": "style=['\"][^'\"]*color\\s*:\\s*(blue|green)[^'\"]*['\"]",
+            "max_score": 0.25
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,87 @@
+{
+  "301": {
+    "exam_info": {
+      "title": "KIỂM TRA ĐỊNH KỲ MÔN TIN HỌC 11",
+      "school": "THPT LONG CANG - TÂY NINH",
+      "academic_year": "2026-2027",
+      "subject": "Tin học",
+      "grade": "11",
+      "exam_code": "301",
+      "duration_minutes": 45,
+      "total_score": 10.0
+    },
+    "part_1_mcq": {
+      "total_questions": 16,
+      "score_per_question": 0.25,
+      "max_score": 4.0,
+      "answers": {
+        "1": "B", "2": "A", "3": "C", "4": "A", "5": "D", "6": "D", "7": "D", "8": "B",
+        "9": "D", "10": "C", "11": "B", "12": "A", "13": "A", "14": "B", "15": "B", "16": "C"
+      }
+    },
+    "part_2_true_false": {
+      "total_questions": 4,
+      "max_score": 4.0,
+      "questions": {
+        "1": { "a": "S", "b": "Đ", "c": "Đ", "d": "S" },
+        "2": { "a": "S", "b": "Đ", "c": "Đ", "d": "S" },
+        "3": { "a": "Đ", "b": "Đ", "c": "S", "d": "S" },
+        "4": { "a": "Đ", "b": "S", "c": "S", "d": "Đ" }
+      }
+    },
+    "part_3_essay": {
+      "total_questions": 2,
+      "max_score": 2.0,
+      "questions": [
+        {
+          "question_number": 1,
+          "topic": "Thuật toán tìm kiếm & sắp xếp",
+          "max_score": 1.0,
+          "criteria": ["Khái niệm thuật toán", "Các bước thực hiện", "Ví dụ minh họa"]
+        },
+        {
+          "question_number": 2,
+          "topic": "Cơ sở dữ liệu quan hệ",
+          "max_score": 1.0,
+          "criteria": ["Khóa chính khóa ngoại", "Liên kết bảng", "Câu truy vấn"]
+        }
+      ]
+    }
+  },
+  "302": {
+    "exam_info": {
+      "title": "KIỂM TRA ĐỊNH KỲ MÔN TIN HỌC 11",
+      "school": "THPT LONG CANG - TÂY NINH",
+      "academic_year": "2026-2027",
+      "subject": "Tin học",
+      "grade": "11",
+      "exam_code": "302",
+      "duration_minutes": 45,
+      "total_score": 10.0
+    },
+    "part_1_mcq": {
+      "total_questions": 16,
+      "score_per_question": 0.25,
+      "max_score": 4.0,
+      "answers": {
+        "1": "A", "2": "C", "3": "B", "4": "D", "5": "A", "6": "B", "7": "C", "8": "D",
+        "9": "B", "10": "A", "11": "D", "12": "C", "13": "B", "14": "A", "15": "C", "16": "D"
+      }
+    },
+    "part_2_true_false": {
+      "total_questions": 4,
+      "max_score": 4.0,
+      "questions": {
+        "1": { "a": "Đ", "b": "S", "c": "Đ", "d": "S" },
+        "2": { "a": "Đ", "b": "Đ", "c": "S", "d": "S" },
+        "3": { "a": "S", "b": "Đ", "c": "Đ", "d": "S" },
+        "4": { "a": "S", "b": "S", "c": "Đ", "d": "Đ" }
+      }
+    },
+    "part_3_essay": {
+      "total_questions": 2,
+      "max_score": 2.0,
+      "questions": []
+    }
+  }
+}
